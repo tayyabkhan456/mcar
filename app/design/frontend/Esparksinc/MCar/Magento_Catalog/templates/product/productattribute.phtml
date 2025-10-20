@@ -1,0 +1,49 @@
+<?php
+/** @var \Magento\Catalog\Block\Product\View $block */
+/** Template: fetch three custom dropdown attributes and show their option labels */
+
+$product = $block->getProduct();
+if (!$product) {
+    return;
+}
+
+/**
+ * Replace these with your real attribute codes
+ * Example: ['color', 'size', 'custom_dropdown']
+ */
+$attributeCodes = [
+    'oil',
+    'ac_filter',
+    'air_filter'
+];
+
+foreach ($attributeCodes as $code) {
+    // skip if attribute not set on product
+    $rawValue = $product->getData($code);
+    if ($rawValue === null || $rawValue === '') {
+        continue;
+    }
+
+    // try to get attribute metadata and label
+    $attribute = $product->getResource()->getAttribute($code);
+    $label = $attribute ? $attribute->getStoreLabel() : ucfirst(str_replace('_', ' ', $code));
+
+    // getAttributeText returns option label for select/multiselect (string or array)
+    $optionText = $product->getAttributeText($code);
+
+    if ($optionText === false || $optionText === null) {
+        // fallback to raw value
+        $display = $block->escapeHtml((string)$rawValue);
+    } elseif (is_array($optionText)) {
+        $escaped = array_map(function ($v) use ($block) { return $block->escapeHtml($v); }, $optionText);
+        $display = implode(', ', $escaped);
+    } else {
+        $display = $block->escapeHtml($optionText);
+    }
+    ?>
+    <div class="product-attribute product-attribute-<?php echo $block->escapeHtmlAttr($code); ?>">
+        <strong class="attribute-label"><?php echo $block->escapeHtml($label); ?>:</strong>
+        <span class="attribute-value"><?php echo $display; ?></span>
+    </div>
+    <?php
+}

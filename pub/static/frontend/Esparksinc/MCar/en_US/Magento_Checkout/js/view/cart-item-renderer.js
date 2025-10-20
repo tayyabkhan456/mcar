@@ -1,0 +1,1 @@
+/var/www/html/m248p2/vendor/magento/module-checkout/view/frontend/web/js/view/cart-item-renderer.js
