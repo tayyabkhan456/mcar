@@ -1,0 +1,127 @@
+<?php
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
+// phpcs:disable Generic.Files.LineLength.TooLong
+
+/** @var \Magento\Customer\Block\Form\Login $block */
+if (!$block->getButtonLockManager()) {
+    $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+    $block->setButtonLockManager(
+        $objectManager->get(\Magento\Framework\View\Element\ButtonLockManager::class)
+    );
+}
+/** @var \Magento\Framework\Escaper $escaper */
+$escaper = $escaper ?? \Magento\Framework\App\ObjectManager::getInstance()
+    ->get(\Magento\Framework\Escaper::class);
+
+?>
+<div class="block block-customer-login">
+    <div class="br-logo">
+            <img src="<?= $block->getViewFileUrl('/images/mcar_logo.png'); ?>" alt="Logo" style="width: 95px; height: 30px;" />
+    </div>
+    <div class="block-title">
+        <strong id="block-customer-login-heading" role="heading" aria-level="2"><?= $escaper->escapeHtml(__('Get started')) ?></strong>
+    </div>
+    <div class="block-content" aria-labelledby="block-customer-login-heading">
+        <form class="form form-login"
+              action="<?= $escaper->escapeUrl($block->getPostActionUrl()) ?>"
+              method="post"
+              id="login-form"
+              data-mage-init='{"validation":{}}'>
+            <?= $block->getBlockHtml('formkey') ?>
+            <fieldset class="fieldset login" data-hasrequired="<?= $escaper->escapeHtml(__('* Required Fields')) ?>">
+                <div class="field note"><?= $escaper->escapeHtml(__('Log in to unlock tailored content and stay connected with your community.')) ?></div>
+                <div class="field email required">
+                    <label class="label" for="email"><span><?= $escaper->escapeHtml(__('Email')) ?></span></label>
+                    <div class="control">
+                        <input name="login[username]" value="<?= $escaper->escapeHtmlAttr($block->getUsername()) ?>"
+                            <?php if ($block->isAutocompleteDisabled()): ?> autocomplete="off"<?php endif; ?>
+                               id="email" type="email" class="input-text"
+                               title="<?= $escaper->escapeHtmlAttr(__('Email')) ?>"
+                               data-mage-init='{"mage/trim-input":{}}'
+                               data-validate="{required:true, 'validate-email':true}">
+                    </div>
+                </div>
+                <div class="field password required">
+                    <div class="lab-fyp">
+                        <label for="pass" class="label"><span><?= $escaper->escapeHtml(__('Password')) ?></span></label>
+                        <div class="secondary"><a class="action remind" href="<?= $escaper->escapeUrl($block->getForgotPasswordUrl()) ?>"><span><?= $escaper->escapeHtml(__('Forgot password?')) ?></span></a></div>
+                    </div>
+                    
+
+                    <div class="control">
+                        <input name="login[password]" type="password"
+                            <?php if ($block->isAutocompleteDisabled()): ?> autocomplete="off"<?php endif; ?>
+                               class="input-text" id="password"
+                               title="<?= $escaper->escapeHtmlAttr(__('Password')) ?>"
+                               data-validate="{required:true}">
+                    </div>
+                </div>
+                <div class="field choice" data-bind="scope: 'showPassword'">
+                    <!-- ko template: getTemplate() --><!-- /ko -->
+                </div>
+                <?= $block->getChildHtml('form_additional_info') ?>
+                <div class="actions-toolbar">
+                    <div class="primary">
+                        <button type="submit" class="action login primary" name="send" id="send2" <?php if ($block->getButtonLockManager()->isDisabled('customer_login_form_submit')): ?> disabled="disabled" <?php endif; ?>>
+                            <span><?= $escaper->escapeHtml(__('Log In')) ?></span>
+                        </button>
+                    </div>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+    <?php // phpcs:ignore Magento2.Legacy.PhtmlTemplate ?>
+    <script type="text/x-magento-init">
+        {
+            "*": {
+                "Magento_Customer/js/block-submit-on-send": {
+                    "formId": "login-form"
+                },
+                "Magento_Ui/js/core/app": {
+                    "components": {
+                        "showPassword": {
+                            "component": "Magento_Customer/js/show-password",
+                            "passwordSelector": "#password"
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</div>
+<style>
+
+   .login-container .block.block-new-customer {
+    display: none;
+}
+
+.login-container {
+    max-width: 420px;
+    margin: 0px auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    position: absolute;
+}
+
+.sections.nav-sections {
+    display: none;
+}
+.page-main{
+    position: relative;
+}
+.block.block-customer-login {
+    width: 100%;
+    border: 1px solid var(--base-border, rgba(229, 229, 229, 1));
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.1), 0px 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+small.copyright {
+    display: none;
+}
+</style>
