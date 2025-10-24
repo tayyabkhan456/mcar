@@ -1,0 +1,138 @@
+<?php
+/**
+ * Custom override: Related, Upsell, Cross-sell dropdown view
+ * Magento 2
+ */
+
+use Magento\Framework\App\ActionInterface;
+
+/** @var \Magento\Catalog\Block\Product\AbstractProduct $block */
+$type = $block->getType();
+$items = $block->getItems();
+$exist = !empty($items);
+
+if (!$exist) {
+    return;
+}
+
+switch ($type) {
+    case 'related':
+        $title = __('Select Related Product');
+        break;
+    case 'upsell':
+        $title = __('Select Upsell Product');
+        break;
+    case 'crosssell':
+        $title = __('Select Cross-sell Product');
+        break;
+    default:
+        $title = __('Select Product');
+        break;
+}
+?>
+
+<div class="block product-dropdown-section <?= $block->escapeHtmlAttr($type) ?>-products-dropdown">
+    <div class="block-title title">
+        <strong><?= $block->escapeHtml($title) ?></strong>
+    </div>
+
+    <div class="block-content content">
+        <form id="<?= $block->escapeHtmlAttr($type) ?>-products-form" method="post">
+            <div class="field product-select">
+                <label for="<?= $block->escapeHtmlAttr($type) ?>_product_select"><?= __('Choose a product') ?></label>
+              <ul class="custom-product-list" id="<?= $block->escapeHtmlAttr($type) ?>_product_list">
+    <?php foreach ($items as $_item): ?>
+        <?php $imageUrl = $block->getImage($_item, 'product_thumbnail_image')->getImageUrl(); ?>
+        <li class="product-item" data-product-id="<?= (int) $_item->getId(); ?>">
+            <img src="<?= $block->escapeUrl($imageUrl) ?>" alt="<?= $block->escapeHtmlAttr($_item->getName()) ?>" />
+            <div class="product-info">
+                <strong><?= $block->escapeHtml($_item->getName()) ?></strong><br>
+                <span class="price"><?= strip_tags($block->getProductPrice($_item)); ?></span>
+            </div>
+        </li>
+    <?php endforeach; ?>
+</ul>
+<input type="hidden" id="<?= $block->escapeHtmlAttr($type) ?>_product_select" name="selected_product" value="">
+
+            </div>
+
+            <button type="submit" class="action primary add-product-to-cart">
+                <span><?= __('Add Selected Product to Cart') ?></span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script type="text/javascript">
+require(['jquery', 'mage/url', 'mage/cookies'], function ($, urlBuilder) {
+    $('#<?= $block->escapeJs($type) ?>-products-form').on('submit', function (e) {
+        e.preventDefault();
+
+        var selectedId = $('#<?= $block->escapeJs($type) ?>_product_select').val();
+        if (!selectedId) {
+            alert('Please select a product.');
+            return;
+        }
+
+        var addToCartUrl = '<?= $block->getUrl("checkout/cart/add") ?>';
+
+        $.ajax({
+            type: 'POST',
+            url: addToCartUrl,
+            dataType: 'json',
+            data: {
+                product: selectedId,
+                form_key: $.mage.cookies.get('form_key')
+            },
+            showLoader: true,
+            success: function (res) {
+                if (res.backUrl) {
+                    window.location.href = res.backUrl;
+                } else {
+                    alert('Product added to cart successfully!');
+                    // Optional: refresh mini cart
+                    $('[data-block="minicart"]').trigger('contentLoading');
+                }
+            },
+            error: function (xhr) {
+                console.error(xhr);
+                alert('Error adding product to cart.');
+            }
+        });
+    });
+});
+
+</script>
+
+<style>
+.custom-product-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+}
+.product-item {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    text-align: center;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.2s ease;
+}
+.product-item img {
+    width: 100px;
+    height: auto;
+    margin-bottom: 0.5rem;
+}
+.product-item.selected {
+    border-color: #007bdb;
+    background: #f0f8ff;
+}
+.product-info {
+    font-size: 0.9rem;
+}
+
+</style>

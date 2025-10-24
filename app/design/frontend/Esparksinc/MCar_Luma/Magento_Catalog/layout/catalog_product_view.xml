@@ -9,5 +9,16 @@
     <body>
          <move element="product.info.overview" destination="product.info.main" after="product.info.addtocart"/>
         <referenceBlock name="view.addto.compare" remove="true"/>
+        <referenceBlock name="product.info.related" remove="true"/>
+        <referenceBlock name="product.info.upsell" remove="true"/>
+        <referenceBlock name="product.info.crosssell" remove="true"/>
+
+          <referenceContainer name="content">
+            <block class="Magento\Framework\View\Element\Template"
+                   name="custom.related.upsell.crosssell"
+                   template="Magento_Catalog::product/custom-related-upsell-crosssell.phtml"/>
+        </referenceContainer>
+        <move element="custom.related.upsell.crosssell" destination="product.info.main" after="product.info.addtocart"/>
+    
     </body>
 </page>

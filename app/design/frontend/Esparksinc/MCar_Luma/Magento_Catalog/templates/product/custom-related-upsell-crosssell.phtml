@@ -1,0 +1,202 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+
+use Magento\Framework\App\ObjectManager;
+use Magento\Catalog\Block\Product\ImageBuilder;
+
+$objectManager = ObjectManager::getInstance();
+$registry = $objectManager->get(\Magento\Framework\Registry::class);
+$product = $registry->registry('current_product');
+
+// Fallback if product not registered
+if (!$product || !$product->getId()) {
+    $request = $objectManager->get(\Magento\Framework\App\RequestInterface::class);
+    $productId = (int)$request->getParam('id');
+    if ($productId) {
+        $productRepository = $objectManager->get(\Magento\Catalog\Api\ProductRepositoryInterface::class);
+        $product = $productRepository->getById($productId);
+    }
+}
+
+// Stop rendering if no valid product found
+if (!$product || !$product->getId()) {
+    echo '<!-- No valid product context found -->';
+    return;
+}
+
+// Fetch product relations
+$relatedBlock = $block->getLayout()->createBlock(\Magento\Catalog\Block\Product\ProductList\Related::class);
+$upsellBlock = $block->getLayout()->createBlock(\Magento\Catalog\Block\Product\ProductList\Upsell::class);
+$crosssellProducts = $product->getCrossSellProducts();
+
+$groups = [
+    'Related Products'    => $relatedBlock ? $relatedBlock->getItems() : [],
+    'Upsell Products'     => $upsellBlock ? $upsellBlock->getItems() : [],
+    'Cross-sell Products' => $crosssellProducts ?: []
+];
+
+$imageHelper = $objectManager->get(\Magento\Catalog\Helper\Image::class);
+?>
+
+<?php if (!empty($groups)): ?>
+<div class="dropdown-product-wrapper">
+    <form id="custom-add-to-cart-form">
+        <?php foreach ($groups as $groupLabel => $products): ?>
+            <?php if (!empty($products)): ?>
+                <div class="dropdown-box">
+                    <label><?= $block->escapeHtml($groupLabel) ?></label>
+                    <select class="product-dropdown" data-group="<?= $block->escapeHtmlAttr($groupLabel) ?>">
+                        <option value=""><?= $block->escapeHtml(__('Select %1', $groupLabel)) ?></option>
+                        <?php foreach ($products as $_item): ?>
+                            <?php
+                                $imageUrl = $imageHelper->init($_item, 'product_base_image')->getUrl();
+                                $priceHtml = $block->getProductPrice($_item);
+                            ?>
+                            <option
+                                value="<?= (int)$_item->getId() ?>"
+                                data-img="<?= $block->escapeUrl($imageUrl) ?>"
+                                data-name="<?= $block->escapeHtml($_item->getName()) ?>"
+                                data-price="<?= $block->escapeHtml($priceHtml ? strip_tags($priceHtml) : '') ?>">
+                                <?= $block->escapeHtml($_item->getName()) ?> + <?= number_format($_item->getFinalPrice(), 0) ?> Rs.
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <div class="dropdown-preview">
+                        <img src="" alt="" class="preview-image" style="display:none;" />
+                        <div class="preview-info"></div>
+                    </div>
+
+                    <!-- Hidden checkbox (updated dynamically) -->
+                    <div class="field choice related" style="display:none;">
+                        <input
+                            type="checkbox"
+                            class="checkbox related product-checkbox"
+                            id="<?= $block->escapeHtmlAttr($groupLabel) ?>-checkbox"
+                            name="related_products[]"
+                            value=""
+                        />
+                    </div>
+                </div>
+            <?php endif; ?>
+        <?php endforeach; ?>
+
+        <div class="submit-box">
+            <button type="submit" class="action primary add-selected-to-cart">
+                <span><?= __('Add Selected Products to Cart') ?></span>
+            </button>
+        </div>
+    </form>
+</div>
+<?php endif; ?>
+
+
+<script type="text/javascript">
+require(['jquery', 'mage/url', 'Magento_Customer/js/customer-data'], function($, urlBuilder, customerData) {
+    $(document).on('change', '.product-dropdown', function() {
+        let selectedOption = $(this).find(':selected');
+        let productId = selectedOption.val();
+        let img = selectedOption.data('img');
+        let name = selectedOption.data('name');
+        let price = selectedOption.data('price');
+        let preview = $(this).siblings('.dropdown-preview');
+        let checkbox = $(this).siblings('.field.choice').find('.product-checkbox');
+
+        if (img) {
+            preview.find('.preview-image').attr('src', img).show();
+            preview.find('.preview-info').html(`<strong>${name}</strong><br>${price}`);
+        } else {
+            preview.find('.preview-image').hide();
+            preview.find('.preview-info').html('');
+        }
+
+        if (productId) {
+            checkbox.val(productId).prop('checked', true);
+        } else {
+            checkbox.val('').prop('checked', false);
+        }
+    });
+
+    $('#custom-add-to-cart-form').on('submit', function(e) {
+        e.preventDefault();
+        let selectedProducts = [];
+        $('.product-checkbox:checked').each(function() {
+            selectedProducts.push($(this).val());
+        });
+
+        if (!selectedProducts.length) {
+            alert('Please select at least one product.');
+            return;
+        }
+
+        $.ajax({
+            url: '<?= $block->escapeUrl($block->getUrl("checkout/cart/addgroup")) ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                products: selectedProducts,
+                form_key: window.FORM_KEY
+            },
+            success: function() {
+                alert('Selected products added to cart!');
+                customerData.reload(['cart'], true);
+            },
+            error: function() {
+                alert('Error adding products to cart.');
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.dropdown-product-wrapper {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+.dropdown-box {
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 12px;
+    background: #fff;
+}
+.dropdown-box label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.product-dropdown {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+.dropdown-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+.preview-image {
+    width: 45px;
+    height: 45px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid #eee;
+}
+.preview-info {
+    font-size: 14px;
+    line-height: 1.4;
+}
+.submit-box {
+    grid-column: span 2;
+    text-align: center;
+}
+.add-selected-to-cart {
+    margin-top: 15px;
+    padding: 10px 25px;
+    font-size: 15px;
+    border-radius: 6px;
+}
+</style>

@@ -1,0 +1,145 @@
+<?php
+/**
+ * Dropdown view for Related / Upsell / Cross-sell Products
+ *
+ * @var $block \Magento\Catalog\Block\Product\AbstractProduct
+ */
+
+use Magento\Framework\App\ActionInterface;
+
+$type = $block->getType() ?: 'crosssell';
+$items = $block->getItems();
+if (empty($items)) {
+    return;
+}
+
+switch ($type) {
+    case 'related':
+        $title = __('Select Related Product');
+        break;
+    case 'upsell':
+        $title = __('Select Upsell Product');
+        break;
+    case 'crosssell':
+        $title = __('Select Cross-sell Product');
+        break;
+    default:
+        $title = __('Select Product');
+}
+?>
+
+<div class="block product-dropdown-section <?= $block->escapeHtmlAttr($type) ?>-products-dropdown">
+    <div class="block-title title">
+        <strong><?= $block->escapeHtml($title) ?></strong>
+    </div>
+
+    <div class="block-content content">
+        <form id="<?= $block->escapeHtmlAttr($type) ?>-products-form" method="post">
+            <div class="field product-select">
+                <label for="<?= $block->escapeHtmlAttr($type) ?>_product_select"><?= __('Choose a product') ?></label>
+                <select id="<?= $block->escapeHtmlAttr($type) ?>_product_select"
+                        name="<?= $block->escapeHtmlAttr($type) ?>_products[]"
+                        class="product-select-field">
+                    <option value=""><?= __('-- Select a product --') ?></option>
+                    <?php foreach ($items as $_item): ?>
+                        <?php $imageUrl = $block->getImage($_item, 'product_thumbnail_image')->getImageUrl(); ?>
+                        <option value="<?= (int) $_item->getId(); ?>"
+                                data-image="<?= $block->escapeUrl($imageUrl) ?>"
+                                data-price="<?= strip_tags($block->getProductPrice($_item)); ?>">
+                            <?= $block->escapeHtml($_item->getName()); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="product-preview" style="display:none;">
+                <img id="<?= $block->escapeHtmlAttr($type) ?>_preview_img" src="" alt="preview" />
+                <p id="<?= $block->escapeHtmlAttr($type) ?>_preview_name"></p>
+                <p id="<?= $block->escapeHtmlAttr($type) ?>_preview_price"></p>
+            </div>
+
+            <button type="submit" class="action primary add-product-to-cart">
+                <span><?= __('Add Selected Product to Cart') ?></span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script type="text/javascript">
+require(['jquery', 'mage/url', 'mage/cookies'], function ($, urlBuilder) {
+    var formId = '#<?= $block->escapeJs($type) ?>-products-form';
+    var selectId = '#<?= $block->escapeJs($type) ?>_product_select';
+
+    $(formId).on('submit', function (e) {
+        e.preventDefault();
+
+        var selectedId = $(selectId).val();
+        if (!selectedId) {
+            alert('Please select a product.');
+            return;
+        }
+
+        // ✅ Always get the latest form key from cookie
+        var formKey = $.mage.cookies.get('form_key');
+
+        $.ajax({
+            type: 'POST',
+            url: '<?= $block->getUrl("checkout/cart/add") ?>',
+            dataType: 'json',
+            data: {
+                product: selectedId,
+                form_key: formKey
+            },
+            showLoader: true,
+            success: function (response) {
+                if (response.backUrl) {
+                    window.location.href = response.backUrl;
+                } else if (response.success || response.cart) {
+                    alert('Product added to cart successfully!');
+                    // Refresh minicart
+                    $('[data-block="minicart"]').trigger('contentLoading');
+                } else {
+                    console.warn(response);
+                    alert('Unexpected response from server.');
+                }
+            },
+            error: function (xhr) {
+                console.error(xhr);
+                alert('Error adding product to cart.');
+            }
+        });
+    });
+});
+</script>
+
+
+<style>
+.product-dropdown-section {
+    margin-top: 2rem;
+    border: 1px solid #ddd;
+    padding: 1rem;
+    border-radius: 8px;
+    background: #fafafa;
+}
+.product-select-field {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+}
+.add-product-to-cart {
+    margin-top: 1rem;
+}
+.block-title strong {
+    font-size: 1.2rem;
+}
+.product-preview {
+    margin-top: 1rem;
+    text-align: center;
+}
+.product-preview img {
+    width: 100px;
+    height: auto;
+    display: block;
+    margin: 0 auto 0.5rem;
+}
+</style>
